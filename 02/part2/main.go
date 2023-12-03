@@ -7,7 +7,7 @@ import (
 )
 
 type Cube struct {
-	color string
+	color    string
 	quantity int
 }
 
@@ -16,11 +16,17 @@ type Set struct {
 }
 
 type Game struct {
-	id int
+	id   int
 	sets []Set
 }
 
 func main() {
+
+// 	input := `Game 1: 3 blue, 4 red; 1 red, 2 green, 6 blue; 2 green
+// Game 2: 1 blue, 2 green; 3 green, 4 blue, 1 red; 1 green, 1 blue
+// Game 3: 8 green, 6 blue, 20 red; 5 blue, 4 red, 13 green; 5 green, 1 red
+// Game 4: 1 green, 3 red, 6 blue; 3 green, 6 red; 3 green, 15 blue, 14 red
+// Game 5: 6 red, 1 blue, 3 green; 2 blue, 1 red, 2 green`
 	input := `Game 1: 1 blue, 2 green, 3 red; 7 red, 8 green; 1 green, 2 red, 1 blue; 2 green, 3 red, 1 blue; 8 green, 1 blue
 Game 2: 12 blue, 3 green, 5 red; 1 green, 1 blue, 8 red; 2 green, 12 blue, 5 red; 7 red, 2 green, 13 blue
 Game 3: 7 red, 4 blue, 13 green; 14 green, 1 blue, 1 red; 1 red, 11 green, 5 blue; 10 green, 3 blue, 3 red; 5 red, 5 blue, 3 green
@@ -122,31 +128,24 @@ Game 98: 9 red, 12 green, 2 blue; 1 blue, 11 green, 10 red; 10 red, 2 green
 Game 99: 4 red, 13 blue, 7 green; 7 green, 5 blue, 6 red; 7 green, 11 blue; 10 green, 2 red, 8 blue
 Game 100: 2 green, 1 blue; 9 red, 8 green, 1 blue; 4 red, 10 green, 1 blue; 17 green, 8 red; 5 green, 1 blue, 7 red; 14 red, 12 green`
 
-	configuration := map[string]int{
-		"red":   12,
-		"green": 13,
-		"blue":  14,
-	}
-
 	splitedInput := strings.Split(input, "\n")
 
 	games := []Game{}
-	// var games []Game
 
 	for _, data := range splitedInput {
 		games = append(games, parseGameFromString(data))
 	}
 
-	validGames := validGamesForConfiguration(games, configuration)
+	minimumConfigs := getMinimumConfigs(games)
 
-	sumIds := 0
-	for _, v := range validGames {
-		sumIds += v.id
+	fmt.Println(len(minimumConfigs))
+
+	result := 0
+	for _, m := range minimumConfigs {
+		result += m["red"] * m["blue"] * m["green"]
 	}
-
-	fmt.Println(sumIds);
+	fmt.Println(result)
 }
-
 
 func parseGameFromString(item string) Game {
 	var game Game
@@ -155,7 +154,7 @@ func parseGameFromString(item string) Game {
 	setsString := strings.Split(splitedGame[1], ";")
 
 	game.id, _ = strconv.Atoi(id)
-	
+
 	for _, data := range setsString {
 		game.sets = append(game.sets, parseSetFromString(data))
 	}
@@ -176,24 +175,27 @@ func parseSetFromString(item string) Set {
 	return set
 }
 
-func validGamesForConfiguration(games []Game, configuration map[string]int) []Game {
-	var validGames []Game
+func getMinimumConfigs(games []Game) []map[string]int {
+
+	var minConfigs []map[string]int
 
 	for _, g := range games {
-		valid := true
+
+		minConfig := map[string]int{
+			"red":   0,
+			"green": 0,
+			"blue":  0,
+		}
+
 		for _, s := range g.sets {
 			for _, c := range s.cubes {
-				limit := configuration[c.color]
-				if c.quantity > limit {
-					valid = false
+				currentValue := minConfig[c.color]
+				if c.quantity > currentValue {
+					minConfig[c.color] = c.quantity
 				}
 			}
 		}
-		if valid {
-			validGames = append(validGames, g)
-		}
+		minConfigs = append(minConfigs, minConfig)
 	}
-	return validGames
+	return minConfigs
 }
-
-
