@@ -1,27 +1,86 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"math/rand"
+	"os"
+	"strconv"
+	"strings"
 )
 
 func main() {
-// 	input := `Card 1: 41 48 83 86 17 | 83 86  6 31 17  9 48 53
-// Card 2: 13 32 20 16 61 | 61 30 68 82 17 32 24 19
-// Card 3:  1 21 53 59 44 | 69 82 63 72 16 21 14  1
-// Card 4: 41 92 73 84 69 | 59 84 76 51 58  5 54 83
-// Card 5: 87 83 26 28 32 | 88 30 70 12 93 22 82 36
-// Card 6: 31 18 13 56 72 | 74 77 10 23 35 67 36 11`
+	file, err := os.ReadFile("input.txt")
 
-	// splitedCards := strings.Split(input, "\n")
-	fmt.Println(quickSort([]int{2, 3, 5, 9, 1, 8, 3, 19, 20, 12}))
-	// fmt.Println(quickSort([]int{2, 3, 5, 9, 1, 8, 3}))
+	if err != nil {
+		fmt.Println(err)
+	}
+	input := string(file)
+
+	cards := strings.Split(input, "\n")
+
+	result := 0
+
+	multipliers := make(map[int]int)
+
+	for i, card := range cards {
+		if card == "" {
+			continue
+		}
+		splitedCard := strings.Split(card, " | ")
+		winNumbersStr := strings.Split(splitedCard[0], " ")[2:]
+
+		var winNumbers []int
+		for _, n := range winNumbersStr {
+			winNumbers = append(winNumbers, convToInt(n))
+		}
+
+		playedNumbersStr := strings.Split(splitedCard[1], " ")
+
+		var playedNumbers []int
+		for _, n := range playedNumbersStr {
+			if n == "" {
+				continue
+			}
+			playedNumbers = append(playedNumbers, convToInt(n))
+		}
+		playedNumbers = quickSort(playedNumbers)
+
+		fmt.Println("Winners", winNumbers)
+		fmt.Println("Played", playedNumbers)
+
+		points := 0
+		propagateMultiplier := 0
+		for _, w := range winNumbers {
+			_, err := binarySearch(w, playedNumbers)
+			if err == nil {
+				propagateMultiplier++
+				if points == 0 {
+					points++
+				} else {
+					points *= 2
+				}
+			}
+		}
+		multiplier := multipliers[i] + 1
+		fmt.Println("i", i)
+		fmt.Println("Multiplier", multiplier)
+		fmt.Println("Points:", points*multiplier)
+		result += multiplier
+
+		fmt.Println("Propagate", propagateMultiplier)
+		for j := i + 1; j <= i+propagateMultiplier; j++ {
+			multipliers[j] = multipliers[j] + multiplier
+		}
+		fmt.Println("Map", multipliers)
+	}
+	fmt.Println("Final Result:", result)
 }
 
-func quickSort(numbers[]int) []int {
+func quickSort(numbers []int) []int {
 
 	if len(numbers) < 2 {
-		return numbers;
+		return numbers
 	}
 	randIndex := rand.Intn(len(numbers))
 	pivot := numbers[randIndex]
@@ -32,7 +91,7 @@ func quickSort(numbers[]int) []int {
 	for i, item := range numbers {
 
 		if i == randIndex {
-			continue;
+			continue
 		}
 
 		if item <= pivot {
@@ -42,12 +101,45 @@ func quickSort(numbers[]int) []int {
 		}
 	}
 
-	fmt.Println("Pivot", pivot)
-	fmt.Println("left", left, "right", right)
 	left = append(quickSort(left), pivot)
-	return append(left, quickSort(right)...);
+	return append(left, quickSort(right)...)
 }
 
-func binarySearch(search int, numbers []int) (position int) {
-	return 1;
+func binarySearch(search int, numbers []int) (position int, err error) {
+	left := 0
+	right := len(numbers)
+
+	var middlePosition int
+
+	for {
+		arr := numbers[left:right]
+		if len(arr) == 0 {
+			err = errors.New("Not found")
+			break
+		}
+
+		middlePosition = (right - left) / 2
+		value := arr[middlePosition]
+		if value == search {
+			position = left + middlePosition
+			break
+		}
+
+		if middlePosition == 0 {
+			middlePosition = 1
+		}
+
+		if search < value {
+			right = right - middlePosition
+		} else {
+			left = left + middlePosition
+		}
+	}
+
+	return position, err
+}
+
+func convToInt(v string) int {
+	converted, _ := strconv.Atoi(v)
+	return converted
 }
