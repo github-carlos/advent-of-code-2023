@@ -3,8 +3,10 @@ package main
 import (
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"unicode"
 )
 
@@ -28,7 +30,7 @@ func main() {
 
 	configs := make(Almanac, 7)
 
-	input := removeEmptyLines(readInput(true))
+	input := removeEmptyLines(readInput(false))
 
 	seeds := convArrayStrToInt(strings.Fields(strings.Split(input[0], ":")[1]));
 
@@ -40,22 +42,42 @@ func main() {
 	}
 
 
+	var wg sync.WaitGroup;
+	resultChan := make(chan int)
 	for _, seed := range seeds {
-		getLeastLocation(seed, 0, configs)
+		wg.Add(1)
+		go getLeastLocation(seed, 0, configs, resultChan, &wg)
 	}
+
+	go func() {
+		defer close(resultChan)
+		wg.Wait()
+	}()
+
+	var locations []int;
+	for result := range resultChan {
+		locations = append(locations, result)
+	}
+
+	sort.Slice(locations, func(i, j int) bool {
+		return locations[i] <= locations[j];
+	})
+
+	fmt.Println(locations[0])
 }
 
-func getLeastLocation(input int, position int, almanac Almanac) {
+func getLeastLocation(input int, position int, almanac Almanac, resultChan chan int, wg *sync.WaitGroup) {
 
 	result := calcFromAlmanac(input, almanac[position])
 
 	if position == (len(almanac) - 1) {
-		fmt.Println("Location", result);
+		resultChan <- result;
+		wg.Done()
 		return;
 	}
 
 	position += 1
-	getLeastLocation(result, position, almanac);
+	getLeastLocation(result, position, almanac, resultChan, wg);
 }
 
 func calcFromAlmanac(input int, configs[][]int) int {
